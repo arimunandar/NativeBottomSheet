@@ -14,11 +14,13 @@ public struct BottomSheetDiagnostics {
     public var layoutPasses = 0
     public var invalidations = 0
     public var selectedDetentIndex = 0
+    /// Number of pages in the sheet. 1 means no page was pushed.
+    public var pageCount = 1
 
     public init() {}
 }
 
-/// The presented view controller. It hosts the content and drives the sheet.
+/// The presented view controller. It hosts a stack of pages and drives the sheet.
 @MainActor
 final class BottomSheetController: UIViewController, UISheetPresentationControllerDelegate {
     #if DEBUG
@@ -33,23 +35,25 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
     private(set) var diagnostics = BottomSheetDiagnostics()
     var onDiagnosticsChange: ((BottomSheetDiagnostics) -> Void)?
 
-    private let content: BottomSheetContent
+    /// The pages. The last one is on top. There is always at least one until the sheet releases its content.
+    private(set) var pages: [BottomSheetPage]
     private let resolver = BottomSheetHeightResolver()
-    private let observer = BottomSheetContentSizeObserver()
 
-    /// Cached content height. It is the detent height, so it excludes the bottom safe area.
+    /// Cached height of the top page. It is the detent height, so it excludes the bottom safe area.
     private var measuredHeight: CGFloat = 0
     private var measuredWidth: CGFloat = 0
     private var measuredTopInset: CGFloat = 0
     private var resolvedHeights: [Int: CGFloat] = [:]
-    private var preferredHeightConstraint: NSLayoutConstraint?
     private var isDiagnosticsScheduled = false
     private let grabberView = UIView()
-    private var originalTranslatesAutoresizing = true
     private var isContentReleased = false
 
-    init(content: BottomSheetContent, sizing: BottomSheetSizing, configuration: BottomSheetConfiguration) {
-        self.content = content
+    /// Push and pop requests run one after the other.
+    private var queue: [(animated: Bool, completion: (() -> Void)?, run: (_ animated: Bool, _ done: @escaping () -> Void) -> Void)] = []
+    private var isTransitioning = false
+
+    init(content: BottomSheetContent, header: UIView? = nil, footer: UIView? = nil, sizing: BottomSheetSizing, configuration: BottomSheetConfiguration) {
+        self.pages = [BottomSheetPage(content: content, header: header, footer: footer)]
         self.sizing = sizing.sanitized
         self.configuration = configuration
         super.init(nibName: nil, bundle: nil)
@@ -57,7 +61,6 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
         Self.liveCount += 1
         #endif
         modalPresentationStyle = .pageSheet
-        observer.onChange = { [weak self] in self?.contentDidChange() }
         if let sheet = sheetPresentationController {
             sheet.delegate = self
             sheet.prefersEdgeAttachedInCompactHeight = true
@@ -97,7 +100,7 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
 
     /// Call when the content changed in a way that is not observed automatically.
     func invalidateContentHeight() {
-        observer.contentDidChange()
+        pages.last?.contentDidChange()
     }
 
     func selectDetent(at index: Int, animated: Bool) {
@@ -125,7 +128,10 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = configuration.backgroundColor ?? .systemBackground
-        installContent()
+        view.clipsToBounds = true
+        installGrabber()
+        mount(pages[0])
+        applyConfiguration()
     }
 
     override func viewDidLayoutSubviews() {
@@ -133,7 +139,7 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
         diagnostics.layoutPasses += 1
         diagnostics.actualSheetHeight = view.frame.height
         if view.bounds.width != measuredWidth || view.safeAreaInsets.top != measuredTopInset {
-            observer.contentDidChange()
+            pages.last?.contentDidChange()
         }
         scheduleDiagnostics()
     }
@@ -145,54 +151,125 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
 
     override func preferredContentSizeDidChange(forChildContentContainer container: UIContentContainer) {
         super.preferredContentSizeDidChange(forChildContentContainer: container)
-        updatePreferredHeightConstraint()
-        observer.contentDidChange()
+        pages.first { $0.childController === container }?.preferredContentSizeDidChange()
     }
 
-    // MARK: Content
+    /// Gives all content back, so the app can use it again, for example in the next sheet.
+    /// Runs when the sheet is dismissed.
+    func releaseContent() {
+        guard isViewLoaded, !isContentReleased else { return }
+        isContentReleased = true
+        queue.removeAll()
+        pages.forEach { $0.release() }
+        onDiagnosticsChange = nil
+    }
 
-    private func installContent() {
-        adoptContent()
-        let contentView = content.view
-        originalTranslatesAutoresizing = contentView.translatesAutoresizingMaskIntoConstraints
-        contentView.translatesAutoresizingMaskIntoConstraints = false
+    // MARK: Pages
 
-        // `observed` reports content size changes. `pinned` is the view placed in the sheet.
-        let observed: UIScrollView
-        let pinned: UIView
-        if let own = content.scrollView {
-            // The content scrolls by itself.
-            observed = own
-            pinned = contentView
-            view.addSubview(contentView)
-        } else {
-            // Plain content grows with Auto Layout. The sheet scrolls it when it exceeds the maximum.
-            let wrapper = UIScrollView()
-            wrapper.translatesAutoresizingMaskIntoConstraints = false
-            wrapper.contentInsetAdjustmentBehavior = .never
-            wrapper.alwaysBounceVertical = false
-            wrapper.keyboardDismissMode = .interactive
-            view.addSubview(wrapper)
-            wrapper.addSubview(contentView)
-            NSLayoutConstraint.activate([
-                contentView.topAnchor.constraint(equalTo: wrapper.contentLayoutGuide.topAnchor),
-                contentView.bottomAnchor.constraint(equalTo: wrapper.contentLayoutGuide.bottomAnchor),
-                contentView.leadingAnchor.constraint(equalTo: wrapper.contentLayoutGuide.leadingAnchor),
-                contentView.trailingAnchor.constraint(equalTo: wrapper.contentLayoutGuide.trailingAnchor),
-                contentView.widthAnchor.constraint(equalTo: wrapper.frameLayoutGuide.widthAnchor),
-            ])
-            observed = wrapper
-            pinned = wrapper
+    var pageCount: Int { pages.count }
+
+    /// Whether a page with this content could be pushed now.
+    func canPush(content: BottomSheetContent, header: UIView?, footer: UIView?) -> Bool {
+        isViewLoaded && !isContentReleased
+            && BottomSheetPage.canBePresented(content: content, header: header, footer: footer, from: self, existing: pages)
+    }
+
+    func push(content: BottomSheetContent, header: UIView?, footer: UIView?, animated: Bool, completion: (() -> Void)?) {
+        guard canPush(content: content, header: header, footer: footer) else {
+            DispatchQueue.main.async { completion?() }
+            return
         }
-        // The pinned view fills the safe area, and stops above the keyboard.
-        NSLayoutConstraint.activate([
-            pinned.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            pinned.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
-            pinned.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
-            pinned.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor),
-        ])
-        if case .viewController(let child) = content { child.didMove(toParent: self) }
+        let page = BottomSheetPage(content: content, header: header, footer: footer)
+        enqueue(animated: animated, completion: completion) { [weak self] animated, done in
+            guard let self, !isContentReleased else { return done() }
+            let outgoing = pages[pages.count - 1]
+            pages.append(page)
+            mount(page)
+            view.layoutIfNeeded()
+            measureAndApply()
+            let shift = slideDistance
+            guard animated else {
+                outgoing.view.isHidden = true
+                return done()
+            }
+            page.view.transform = CGAffineTransform(translationX: shift, y: 0)
+            UIView.animate(withDuration: 0.35, delay: 0, options: .curveEaseInOut) {
+                page.view.transform = .identity
+                outgoing.view.transform = CGAffineTransform(translationX: -shift * 0.3, y: 0)
+                outgoing.view.alpha = 0
+            } completion: { _ in
+                outgoing.view.isHidden = true
+                outgoing.view.transform = .identity
+                outgoing.view.alpha = 1
+                done()
+            }
+        }
+    }
 
+    /// Removes the top page. Does nothing when only one page is left.
+    func pop(animated: Bool, completion: (() -> Void)?) {
+        enqueue(animated: animated, completion: completion) { [weak self] animated, done in
+            guard let self else { return done() }
+            popPages(keeping: pages.count - 1, animated: animated, done: done)
+        }
+    }
+
+    /// Removes all pages except the first one.
+    func popToRoot(animated: Bool, completion: (() -> Void)?) {
+        enqueue(animated: animated, completion: completion) { [weak self] animated, done in
+            guard let self else { return done() }
+            popPages(keeping: 1, animated: animated, done: done)
+        }
+    }
+
+    private func popPages(keeping count: Int, animated: Bool, done: @escaping () -> Void) {
+        guard !isContentReleased, count >= 1, pages.count > count else { return done() }
+        let leaving = Array(pages[count...])
+        pages.removeSubrange(count...)
+        let revealed = pages[count - 1]
+        let top = leaving[leaving.count - 1]
+        revealed.view.isHidden = false
+        measureAndApply()
+        let finish = {
+            leaving.forEach { $0.release() }
+            done()
+        }
+        guard animated else { return finish() }
+        let shift = slideDistance
+        revealed.view.transform = CGAffineTransform(translationX: -shift * 0.3, y: 0)
+        revealed.view.alpha = 0
+        UIView.animate(withDuration: 0.35, delay: 0, options: .curveEaseInOut) {
+            revealed.view.transform = .identity
+            revealed.view.alpha = 1
+            top.view.transform = CGAffineTransform(translationX: shift, y: 0)
+        } completion: { _ in finish() }
+    }
+
+    /// Runs one request at a time. Requests that wait behind another one skip their animation,
+    /// so a quick series of calls finishes fast.
+    private func enqueue(animated: Bool, completion: (() -> Void)?, _ run: @escaping (_ animated: Bool, _ done: @escaping () -> Void) -> Void) {
+        queue.append((animated, completion, run))
+        runNext()
+    }
+
+    private func runNext() {
+        guard !isTransitioning, !queue.isEmpty else { return }
+        let next = queue.removeFirst()
+        isTransitioning = true
+        let animated = next.animated && queue.isEmpty && view.window != nil
+        next.run(animated) { [weak self] in
+            next.completion?()
+            self?.isTransitioning = false
+            self?.runNext()
+        }
+    }
+
+    /// How far a page slides. The sign follows the layout direction.
+    private var slideDistance: CGFloat {
+        (view.effectiveUserInterfaceLayoutDirection == .rightToLeft ? -1 : 1) * view.bounds.width
+    }
+
+    private func installGrabber() {
         // Own grabber, used only when `grabberColor` is set. It sits on top and never takes touches.
         grabberView.translatesAutoresizingMaskIntoConstraints = false
         grabberView.isUserInteractionEnabled = false
@@ -204,61 +281,30 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
             grabberView.widthAnchor.constraint(equalToConstant: 36),
             grabberView.heightAnchor.constraint(equalToConstant: 5),
         ])
-        applyConfiguration()
-        observer.observe(observed)
-        updatePreferredHeightConstraint()
     }
 
-    /// Takes the content. Content that still sits in another hierarchy is moved here.
-    private func adoptContent() {
-        switch content {
-        case .viewController(let child):
-            if child.parent != nil {
-                child.willMove(toParent: nil)
-                child.viewIfLoaded?.removeFromSuperview()
-                child.removeFromParent()
-            }
-            addChild(child)
-        case .view(let view):
-            view.removeFromSuperview()
+    /// Puts a page in the sheet. It fills the safe area, and stops above the keyboard.
+    private func mount(_ page: BottomSheetPage) {
+        page.install(in: self)
+        view.insertSubview(page.view, belowSubview: grabberView)
+        NSLayoutConstraint.activate([
+            page.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            page.view.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            page.view.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            page.view.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor),
+        ])
+        page.onChange = { [weak self, weak page] in
+            guard let self, let page, page === pages.last else { return }
+            contentDidChange()
         }
-    }
-
-    /// Gives the content back, so the app can use it again, for example in the next sheet.
-    /// Runs when the sheet is dismissed.
-    func releaseContent() {
-        guard isViewLoaded, !isContentReleased else { return }
-        isContentReleased = true
-        preferredHeightConstraint?.isActive = false
-        preferredHeightConstraint = nil
-        let contentView = content.view
-        if case .viewController(let child) = content {
-            child.willMove(toParent: nil)
-            contentView.removeFromSuperview()
-            child.removeFromParent()
-        } else {
-            contentView.removeFromSuperview()
-        }
-        contentView.translatesAutoresizingMaskIntoConstraints = originalTranslatesAutoresizing
-        onDiagnosticsChange = nil
-    }
-
-    private func updatePreferredHeightConstraint() {
-        preferredHeightConstraint?.isActive = false
-        preferredHeightConstraint = nil
-        guard case .viewController(let child) = content, content.scrollView == nil,
-              child.preferredContentSize.height > 0 else { return }
-        let constraint = child.view.heightAnchor.constraint(equalToConstant: child.preferredContentSize.height)
-        constraint.priority = .defaultHigh
-        constraint.isActive = true
-        preferredHeightConstraint = constraint
     }
 
     // MARK: Measuring and applying
 
     @discardableResult
     private func measure(width: CGFloat, topInset: CGFloat) -> Bool {
-        let height = resolver.contentHeight(of: content, width: width, topInset: topInset)
+        guard let page = pages.last else { return false }
+        let height = page.height(width: width, topInset: topInset)
         measuredWidth = width
         measuredTopInset = topInset
         guard abs(height - measuredHeight) >= 0.5 else { return false }
@@ -269,11 +315,17 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
 
     /// Runs on the observer's coalesced callback. Never runs inside a layout pass.
     private func contentDidChange() {
-        guard view.window != nil, view.bounds.width > 0 else { return }
-        // Skip when the height did not change. This stops invalidation loops.
-        guard measure(width: view.bounds.width, topInset: view.safeAreaInsets.top) else { return }
+        guard view.window != nil else { return }
+        measureAndApply()
+    }
+
+    /// Measures the top page, and invalidates the detents when the height changed.
+    /// Skips when the height did not change. This stops invalidation loops.
+    private func measureAndApply() {
+        guard view.bounds.width > 0,
+              measure(width: view.bounds.width, topInset: view.safeAreaInsets.top) else { return }
         if sizing.followsContent, let sheet = sheetPresentationController {
-            applyToSheet(animated: true) { sheet.invalidateDetents() }
+            applyToSheet(animated: view.window != nil) { sheet.invalidateDetents() }
         }
         scheduleDiagnostics()
     }
@@ -345,6 +397,7 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
 
     private func refreshDiagnostics() {
         diagnostics.sizingMode = sizing.description
+        diagnostics.pageCount = pages.count
         if case .fixed(let height) = sizing { diagnostics.requestedHeight = height } else { diagnostics.requestedHeight = nil }
     }
 

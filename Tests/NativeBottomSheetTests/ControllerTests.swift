@@ -123,6 +123,7 @@ final class ControllerTests: XCTestCase {
                 let controller = makeController(.view(makeView(height: 120)))
                 controller.loadViewIfNeeded()
                 controller.updateHeight(300, animated: false)
+                controller.push(content: .view(makeView(height: 80)), header: makeView(height: 40), footer: makeView(height: 40), animated: false, completion: nil)
                 controller.onDiagnosticsChange = { _ in }
             }
         }

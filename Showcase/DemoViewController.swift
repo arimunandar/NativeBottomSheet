@@ -60,9 +60,9 @@ class DemoViewController: UIViewController {
 
     // MARK: Presenting
 
-    func present(_ content: UIView, sizing: BottomSheetSizing) {
+    func present(_ content: UIView, header: UIView? = nil, footer: UIView? = nil, sizing: BottomSheetSizing) {
         dismissCurrentSheet { [self] in
-            track(BottomSheet.present(content: content, sizing: sizing, configuration: configuration, from: self))
+            track(BottomSheet.present(content: content, header: header, footer: footer, sizing: sizing, configuration: configuration, from: self))
         }
     }
 
@@ -93,7 +93,7 @@ class DemoViewController: UIViewController {
         requested \(pt(d.requestedHeight))   measured \(pt(d.measuredContentHeight))
         resolved  \(pt(d.resolvedDetentHeight))   actual   \(pt(d.actualSheetHeight))
         max       \(pt(d.maximumDetentValue))
-        layouts   \(d.layoutPasses)   invalidations \(d.invalidations)
+        layouts   \(d.layoutPasses)   invalidations \(d.invalidations)   pages \(d.pageCount)
         """
     }
 

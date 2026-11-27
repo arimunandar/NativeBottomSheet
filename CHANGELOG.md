@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Header and footer: `present(content:header:footer:...)`. The header is pinned to the top, the footer to the bottom above the keyboard, and only the content scrolls.
+- Pages inside the sheet: `push`, `pop`, `popToRoot`, `pageCount`. The sheet follows the height of the page on top.
+- `BottomSheetDiagnostics.pageCount`.
+
 ## 0.1.0
 
 First release.

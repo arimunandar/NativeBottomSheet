@@ -20,6 +20,7 @@ final class MenuViewController: UITableViewController {
         Demo(title: "10 — Keyboard & Form", subtitle: "Text fields and a text view", make: KeyboardFormDemo.init),
         Demo(title: "11 — Multiple Detents", subtitle: "Detents and appearance options", make: MultipleDetentsDemo.init),
         Demo(title: "12 — Stress Test", subtitle: "100 updates and 100 present cycles", make: StressTestDemo.init),
+        Demo(title: "13 — Header, Footer & Push", subtitle: "Pinned header and footer, pages inside the sheet", make: HeaderFooterPushDemo.init),
     ]
 
     init() { super.init(style: .insetGrouped) }

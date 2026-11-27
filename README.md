@@ -15,7 +15,7 @@ Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/arimunandar/NativeBottomSheet.git", from: "0.1.0"),
+    .package(url: "https://github.com/arimunandar/NativeBottomSheet.git", from: "0.2.0"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "NativeBottomSheet", package: "NativeBottomSheet")]),
@@ -178,6 +178,43 @@ BottomSheet.present(content: details, sizing: .fixed(300), configuration: config
 | Detents from large to small | UIKit expects them from small to large. The library does not check the order | List them from small to large |
 | Setting `UIDesignRequiresCompatibility` only for this library | The whole app loses the iOS 26 look | Do not set it. Accept the small gap of floating sheets on iOS 26 |
 
+## Header, footer and pages
+
+A sheet shows pages. A page is an optional header, the content, and an optional footer.
+The header is pinned to the top. The footer is pinned to the bottom, and it rises above the keyboard.
+Only the content between them scrolls. The sheet height is the header, plus the content, plus the footer.
+
+```swift
+BottomSheet.present(
+    content: listView,
+    header: titleBar,           // any UIView that gets its height from Auto Layout
+    footer: saveButtonBar,      // same
+    sizing: .dynamic(maxHeight: 500),
+    from: self
+)
+```
+
+Push more pages onto the sheet. Every page has its own header and footer. The new page slides in, and the sheet
+moves to its height. Pop goes back, and the page below is the same as you left it.
+
+```swift
+let sheet = BottomSheet.present(content: menuView, header: menuHeader, from: self)
+
+sheet?.push(content: detailView, header: detailHeaderWithBackButton, footer: doneBar)   // slide in
+sheet?.pop()                                                                             // back
+sheet?.popToRoot()                                                                       // back to the first page
+sheet?.pageCount                                                                         // 1 after present
+```
+
+Your header has to show its own back button and call `sheet.pop()`. The library draws no navigation bar.
+
+- A view or controller can be used by one page only. A push that cannot work is refused, and the completion still runs.
+- A page below the top stays loaded and hidden. It keeps its state, but it gets no appearance callbacks.
+- A popped page gives its views back, so you can use them again.
+- Calls that come while a page slides run one after the other. The ones that wait skip their animation.
+- The sheet follows the page on top only when its sizing follows the content (`.dynamic`).
+  With `.fixed` or `.detents`, the height stays the same for every page.
+
 ## Control the sheet
 
 `present` returns a handle. Keep it if you want to change the sheet later.
@@ -273,9 +310,9 @@ In debug builds, `BottomSheet.liveSheetCount` tells you how many sheets are aliv
 
 ## Showcase app
 
-`BottomSheetPOC.xcodeproj` is a demo app with 12 screens. Open it and run it.
+`BottomSheetPOC.xcodeproj` is a demo app with 13 screens. Open it and run it.
 The `Showcase/` folder holds the screens. The project file is made from `project.yml` with XcodeGen.
-Pass `-demo N` (1 to 12) as a launch argument to open a screen at launch.
+Pass `-demo N` (1 to 13) as a launch argument to open a screen at launch.
 
 The demo app sets `UIDesignRequiresCompatibility`. Your app does not need it.
 

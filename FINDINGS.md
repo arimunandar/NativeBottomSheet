@@ -126,6 +126,18 @@ Instruments profiling, VoiceOver. Anything that depends on those is marked "not 
     Detents must go from small to large. The library cannot check this, because dynamic heights are only known at run time.
     The system medium detent is inactive in landscape on iPhone (UIKit rule). Use `.fractional(0.5)` there. **Not tested.**
 
+14. **Header, footer and pages.**
+    A page is an optional header, the content and an optional footer. Verified on iOS 26.3 in demo 13:
+    - The header stays at the top, the footer at the bottom, and only the content scrolls (measured 945, capped at 400).
+    - The footer rises above the keyboard, because the page stops at the keyboard layout guide.
+    - Pushing a page moved the sheet to the height of that page (322 to 266). Pop went back (266 to 322). The first page kept its state.
+    - A long page (measured 1765) was capped at 520 and scrolled between the header and the footer.
+    - Five pushes in a row gave 6 pages and 1 invalidation. Waiting calls skip their animation.
+    - Pop to root went from 6 pages to 1 and restored the height.
+    Limits: a page below the top is hidden, not removed. Its controller gets no appearance callbacks.
+    There is no swipe-back gesture and no navigation bar. The header must offer its own back button.
+    The slide animation was not checked frame by frame. Pages with `.fixed` or `.detents` sizing keep one height.
+
 ## Capability matrix
 
 | Capability | Status | Evidence |
@@ -149,6 +161,8 @@ Instruments profiling, VoiceOver. Anything that depends on those is marked "not 
 | Corner radius with a solid color | Native support | Demo 11, radius 24 |
 | Grabber color | Supported with custom implementation | Demo 11, finding 11 |
 | Page behind stays at full height | Supported with custom implementation | Demos 01 and 11, finding 12 |
+| Header and footer | Supported with custom implementation | Demo 13, finding 14 |
+| Push and pop inside the sheet | Supported with custom implementation | Demo 13, finding 14. Swipe-back is not supported. |
 | Keyboard handling | Native support | Demo 10 (finding 2) |
 | Width change and rotation | Supported with custom implementation | Rotation run |
 | Dynamic Type | Supported with custom implementation | Accessibility size run |
