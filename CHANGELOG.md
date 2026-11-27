@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+- Fix a crash: `BottomSheetSizing.description`, which feeds `diagnostics.sizingMode`, converted heights with `Int(...)`.
+  It crashed for infinite, NaN and very large values, for example `.dynamic(maxHeight: .infinity)`.
+- Demo app: fix a crash in the live numbers card for "Maximum available height".
+- Demo app: `-smoke YES` presses every button of every demo and prints the result.
+
 ## 0.2.0
 
 - Header and footer: `present(content:header:footer:...)`. The header is pinned to the top, the footer to the bottom above the keyboard, and only the content scrolls.

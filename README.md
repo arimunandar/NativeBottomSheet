@@ -15,7 +15,7 @@ Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/arimunandar/NativeBottomSheet.git", from: "0.2.0"),
+    .package(url: "https://github.com/arimunandar/NativeBottomSheet.git", from: "0.2.1"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "NativeBottomSheet", package: "NativeBottomSheet")]),
@@ -314,6 +314,8 @@ In debug builds, `BottomSheet.liveSheetCount` tells you how many sheets are aliv
 The `Showcase/` folder holds the screens. The project file is made from `project.yml` with XcodeGen.
 Pass `-demo N` (1 to 13) as a launch argument to open a screen at launch.
 Pass `-style light` or `-style dark` to force the appearance.
+Pass `-smoke YES` in a debug build to open every screen and press every button, on the screens and in the sheets.
+It prints one line per press and writes the same lines to `Documents/smoke.log`. It is a quick check for crashes.
 
 The demo app sets `UIDesignRequiresCompatibility`. Your app does not need it.
 

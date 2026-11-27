@@ -70,8 +70,9 @@ final class MetricsView: UIView {
     /// Shows the numbers of a sheet. `nil` means no sheet is presented.
     func update(_ d: BottomSheetDiagnostics?) {
         func points(_ value: CGFloat?) -> String {
-            guard let value else { return "–" }
-            return value == value.rounded() ? "\(Int(value))" : String(format: "%.1f", value)
+            guard let value, !value.isNaN else { return "–" }
+            if value.isInfinite { return value > 0 ? "max" : "–" }   // Int(value) would trap on infinity
+            return value == value.rounded() ? String(format: "%.0f", value) : String(format: "%.1f", value)
         }
         modeLabel.text = d?.sizingMode ?? "No sheet presented"
         modeLabel.textColor = d == nil ? .tertiaryLabel : .label

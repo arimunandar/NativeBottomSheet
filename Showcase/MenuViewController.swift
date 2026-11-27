@@ -114,6 +114,16 @@ final class MenuViewController: UITableViewController {
         tableView.register(DemoCell.self, forCellReuseIdentifier: DemoCell.identifier)
         tableView.tableFooterView = makeFooter()
 
+        #if DEBUG
+        // `-smoke YES` presses every button of every demo. See SmokeRunner.
+        if UserDefaults.standard.bool(forKey: "smoke") {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if let self { await SmokeRunner.run(menu: self) }
+            }
+        }
+        #endif
+
         // `-demo N` opens demo N at launch. Used for manual and scripted checks.
         let number = UserDefaults.standard.integer(forKey: "demo")
         if let path = indexPath(ofDemo: number) {
@@ -162,9 +172,23 @@ final class MenuViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        let demo = groups[indexPath.section].demos[indexPath.row]
+        push(groups[indexPath.section].demos[indexPath.row], animated: true)
+    }
+
+    @discardableResult
+    private func push(_ demo: Demo, animated: Bool) -> UIViewController {
         let screen = demo.make()
         screen.title = demo.title
-        navigationController?.pushViewController(screen, animated: true)
+        navigationController?.pushViewController(screen, animated: animated)
+        return screen
+    }
+
+    /// The numbers of all demos, in order.
+    var demoNumbers: [Int] { groups.flatMap(\.demos).map(\.number).sorted() }
+
+    /// Opens a demo without animation. Returns its screen.
+    func showDemo(_ number: Int) -> UIViewController? {
+        guard let path = indexPath(ofDemo: number) else { return nil }
+        return push(groups[path.section].demos[path.row], animated: false)
     }
 }

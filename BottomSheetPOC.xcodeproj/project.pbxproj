@@ -17,6 +17,7 @@
 		6C84ABA6B4F979286B9935B0 /* SampleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79A11E1034631F66C1041000 /* SampleViews.swift */; };
 		7D72842F8EC238FFF60C38D4 /* MenuViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBD67F890F52B67F65C76C8 /* MenuViewController.swift */; };
 		81217994617D825DD0137737 /* Demo01FixedHeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76B54094B10001C477B4DD88 /* Demo01FixedHeight.swift */; };
+		8F3CF8BE98A189DD691037B5 /* SmokeRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 193ABEB565EC91071514DFAD /* SmokeRunner.swift */; };
 		8F6396A12942263BD72EF164 /* NativeBottomSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 62A46B9A5DC8A6B1810007C7 /* NativeBottomSheet */; };
 		97F9F54F6BECB69ABBBAC688 /* Demo10KeyboardForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 978BAA9404F0E347DE0288F5 /* Demo10KeyboardForm.swift */; };
 		A89CB29F956539BC9405BAF6 /* DemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63FD3ED23ADC2C98F0DB91E4 /* DemoViewController.swift */; };
@@ -33,6 +34,7 @@
 		072CB1706F89E2A3A1E20F9C /* Demo06AsyncContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demo06AsyncContent.swift; sourceTree = "<group>"; };
 		076D19D15D3788390F12F674 /* Demo05Expandable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demo05Expandable.swift; sourceTree = "<group>"; };
 		0E1929D0E43FEBEC4AAF6512 /* Demo11MultipleDetents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demo11MultipleDetents.swift; sourceTree = "<group>"; };
+		193ABEB565EC91071514DFAD /* SmokeRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeRunner.swift; sourceTree = "<group>"; };
 		1B166FD5110F859CDEF7E608 /* Demo03DynamicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demo03DynamicView.swift; sourceTree = "<group>"; };
 		1B709CB88A078E4E314E36F9 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		315803E4E03277C549D631A6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -129,6 +131,7 @@
 				BBBD67F890F52B67F65C76C8 /* MenuViewController.swift */,
 				D94C8D38FB1A2C1EE05D9935 /* MetricsView.swift */,
 				79A11E1034631F66C1041000 /* SampleViews.swift */,
+				193ABEB565EC91071514DFAD /* SmokeRunner.swift */,
 				663D6DF0913E55DCC0F34087 /* Demos */,
 			);
 			path = Showcase;
@@ -213,6 +216,7 @@
 				1254F7FBE66E4399D660677F /* MetricsView.swift in Sources */,
 				6C84ABA6B4F979286B9935B0 /* SampleViews.swift in Sources */,
 				55E19885C562FB9492EB9E1B /* SceneDelegate.swift in Sources */,
+				8F3CF8BE98A189DD691037B5 /* SmokeRunner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -138,6 +138,17 @@ Instruments profiling, VoiceOver. Anything that depends on those is marked "not 
     There is no swipe-back gesture and no navigation bar. The header must offer its own back button.
     The slide animation was not checked frame by frame. Pages with `.fixed` or `.detents` sizing keep one height.
 
+15. **A crash found on a device, and the check that now guards against it.**
+    "Maximum available height" in demo 1 crashed the demo app. The cause was in the demo app, not in the library:
+    the live numbers card called `Int(value)` on an infinite requested height. Swift traps on that.
+    The crash report said "Double value cannot be converted to Int because it is either infinite or NaN" at `MetricsView.swift:74`.
+    A search found the same pattern in the library: `BottomSheetSizing.description` called `Int(...)` on the min and max of `.dynamic`
+    and on very large `.fixed` values. So `diagnostics.sizingMode` could crash for `.dynamic(maxHeight: .infinity)`.
+    Both now use a formatter that cannot trap, and a test covers infinity, NaN and 1e30.
+    The smoke run (`-smoke YES`) now presses every button of all 13 demos and every button inside the sheets.
+    Result: 50 presses on the screens and 25 inside the sheets, no crash, on a simulator (iOS 26.3) and on an iPhone 15 Pro.
+    It does not cover sliders, switches, typing, rotation or iPad.
+
 ## Capability matrix
 
 | Capability | Status | Evidence |

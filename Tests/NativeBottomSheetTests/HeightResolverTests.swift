@@ -106,6 +106,18 @@ final class SizingTests: XCTestCase {
         XCTAssertEqual(BottomSheetSizing.fixed(.nan).sanitized, BottomSheetSizing.fixed(.nan).sanitized)
     }
 
+    func testDescriptionNeverTraps() {
+        // `Int(value)` traps on infinity, NaN and values above Int.max.
+        XCTAssertEqual(BottomSheetSizing.fixed(.infinity).description, "fixed(max)")
+        XCTAssertEqual(BottomSheetSizing.fixed(.nan).description, "fixed(nan)")
+        XCTAssertEqual(BottomSheetSizing.fixed(1e30).description, "fixed(1000000000000000019884624838656)")
+        XCTAssertEqual(BottomSheetSizing.fixed(-.infinity).description, "fixed(-max)")
+        XCTAssertEqual(BottomSheetSizing.dynamic(minHeight: .infinity, maxHeight: .infinity).description, "dynamic(min: max, max: max)")
+        XCTAssertEqual(BottomSheetSizing.dynamic(minHeight: .nan, maxHeight: .nan).description, "dynamic(min: nan, max: nan)")
+        XCTAssertEqual(BottomSheetSizing.dynamic().description, "dynamic(min: 0, max: system)")
+        XCTAssertEqual(BottomSheetSizing.detents([.fixed(.infinity), .dynamic(maxHeight: 1e300)]).sanitized.description.isEmpty, false)
+    }
+
     func testConfigurationDefaults() {
         let configuration = BottomSheetConfiguration()
         XCTAssertNil(configuration.cornerRadius)

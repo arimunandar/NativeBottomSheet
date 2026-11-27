@@ -45,12 +45,19 @@ public enum BottomSheetSizing: Equatable, CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .fixed(let h): return h.isFinite ? "fixed(\(Int(h)))" : "fixed(max)"
-        case .dynamic(let min, let max): return "dynamic(min: \(Int(min)), max: \(max.map { String(Int($0)) } ?? "system"))"
+        case .fixed(let h): return "fixed(\(Self.format(h)))"
+        case .dynamic(let min, let max): return "dynamic(min: \(Self.format(min)), max: \(max.map(Self.format) ?? "system"))"
         case .fractional(let f): return "fractional(\(f))"
         case .medium: return "medium"
         case .large: return "large"
         case .detents(let list): return "detents[\(list.map(\.description).joined(separator: ", "))]"
         }
+    }
+
+    /// A height as text. It never traps: `Int(value)` would on infinity, NaN and huge values.
+    private static func format(_ value: CGFloat) -> String {
+        if value.isNaN { return "nan" }
+        if value.isInfinite { return value > 0 ? "max" : "-max" }
+        return String(format: "%.0f", value)
     }
 }
