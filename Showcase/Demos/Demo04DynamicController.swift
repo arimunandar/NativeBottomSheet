@@ -5,7 +5,7 @@ final class DynamicControllerDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addHeader("A plain UIViewController. No base class is needed.")
-        addButton("Present controller, dynamic()") { [weak self] in
+        addButton("Present controller, dynamic()", prominent: true) { [weak self] in
             self?.present(ProfileViewController(), sizing: .dynamic())
         }
     }

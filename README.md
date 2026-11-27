@@ -313,6 +313,7 @@ In debug builds, `BottomSheet.liveSheetCount` tells you how many sheets are aliv
 `BottomSheetPOC.xcodeproj` is a demo app with 13 screens. Open it and run it.
 The `Showcase/` folder holds the screens. The project file is made from `project.yml` with XcodeGen.
 Pass `-demo N` (1 to 13) as a launch argument to open a screen at launch.
+Pass `-style light` or `-style dark` to force the appearance.
 
 The demo app sets `UIDesignRequiresCompatibility`. Your app does not need it.
 

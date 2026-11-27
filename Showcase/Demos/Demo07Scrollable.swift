@@ -5,13 +5,13 @@ final class ScrollableDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addHeader("Natural height is taller than the maximum")
-        addButton("Tall UIView, max 400 (sheet scrolls it)") { [weak self] in
+        addButton("Tall UIView, max 400 (sheet scrolls it)", prominent: true) { [weak self] in
             self?.present(Self.makeRows(), sizing: .dynamic(maxHeight: 400))
         }
-        addButton("UIScrollView content, max 400") { [weak self] in
+        addButton("UIScrollView content, max 400", prominent: true) { [weak self] in
             self?.present(Self.makeScrollView(), sizing: .dynamic(maxHeight: 400))
         }
-        addButton("UIScrollView content, system maximum") { [weak self] in
+        addButton("UIScrollView content, system maximum", prominent: true) { [weak self] in
             self?.present(Self.makeScrollView(), sizing: .dynamic())
         }
     }

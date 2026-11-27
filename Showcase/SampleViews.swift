@@ -11,8 +11,9 @@ func makeLabel(_ text: String, style: UIFont.TextStyle = .body, color: UIColor =
 }
 
 func makeButton(_ title: String, action: @escaping () -> Void) -> UIButton {
-    var configuration = UIButton.Configuration.bordered()
+    var configuration = UIButton.Configuration.tinted()
     configuration.title = title
+    configuration.cornerStyle = .large
     return UIButton(configuration: configuration, primaryAction: UIAction { _ in action() })
 }
 

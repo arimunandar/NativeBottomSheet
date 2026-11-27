@@ -5,7 +5,7 @@ final class HeaderFooterPushDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addHeader("The header and the footer stay in place. Only the content scrolls.")
-        addButton("Header + long content + footer, dynamic(max 400)") { [weak self] in
+        addButton("Header + long content + footer, dynamic(max 400)", prominent: true) { [weak self] in
             guard let self else { return }
             present(StackContentView((1...25).map { makeLabel("Row \($0)") }),
                     header: makeHeader(title: "Header", back: nil),
@@ -13,7 +13,7 @@ final class HeaderFooterPushDemo: DemoViewController {
                     sizing: .dynamic(maxHeight: 400))
         }
         addHeader("Pages. The sheet follows the height of the page on top.")
-        addButton("Settings with pages, dynamic(max 520)") { [weak self] in
+        addButton("Settings with pages, dynamic(max 520)", prominent: true) { [weak self] in
             guard let self else { return }
             present(makeRootContent(),
                     header: makeHeader(title: "Settings", back: nil),

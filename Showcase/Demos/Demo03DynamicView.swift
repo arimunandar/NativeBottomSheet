@@ -5,10 +5,10 @@ final class DynamicViewDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addHeader("Height follows the view. Changes are observed automatically.")
-        addButton("Present dynamic()") { [weak self] in
+        addButton("Present dynamic()", prominent: true) { [weak self] in
             self?.present(DynamicRowsView(), sizing: .dynamic())
         }
-        addButton("Present dynamic(min 200, max 400)") { [weak self] in
+        addButton("Present dynamic(min 200, max 400)", prominent: true) { [weak self] in
             self?.present(DynamicRowsView(), sizing: .dynamic(minHeight: 200, maxHeight: 400))
         }
     }

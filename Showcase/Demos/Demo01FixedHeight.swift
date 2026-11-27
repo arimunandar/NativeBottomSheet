@@ -6,10 +6,10 @@ final class FixedHeightDemo: DemoViewController {
         super.viewDidLoad()
         addHeader("Fixed height, including the bottom safe area")
         for height: CGFloat in [100, 200, 300, 500] {
-            addButton("\(Int(height)) pt") { [weak self] in self?.show(height) }
+            addButton("\(Int(height)) pt", prominent: true) { [weak self] in self?.show(height) }
         }
-        addButton("Maximum available height") { [weak self] in self?.show(.infinity) }
-        addButton("Large (full screen)") { [weak self] in
+        addButton("Maximum available height", prominent: true) { [weak self] in self?.show(.infinity) }
+        addButton("Large (full screen)", prominent: true) { [weak self] in
             self?.present(StackContentView([makeLabel("Large", style: .headline), makeLabel("Full screen. The page behind must stay in place.")]), sizing: .large)
         }
     }

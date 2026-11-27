@@ -5,9 +5,9 @@ final class AsyncContentDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addHeader("Content changes after presentation")
-        addButton("Loading, then short content") { [weak self] in self?.show(paragraphs: 1) }
-        addButton("Loading, then long content") { [weak self] in self?.show(paragraphs: 12) }
-        addButton("Empty content") { [weak self] in self?.present(UIView(), sizing: .dynamic()) }
+        addButton("Loading, then short content", prominent: true) { [weak self] in self?.show(paragraphs: 1) }
+        addButton("Loading, then long content", prominent: true) { [weak self] in self?.show(paragraphs: 12) }
+        addButton("Empty content", prominent: true) { [weak self] in self?.present(UIView(), sizing: .dynamic()) }
     }
 
     private func show(paragraphs: Int) {

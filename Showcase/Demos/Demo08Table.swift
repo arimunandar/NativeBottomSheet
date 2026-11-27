@@ -8,11 +8,11 @@ final class TableDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addHeader("A table as content. Row changes are observed automatically.")
-        addButton("Present UITableViewController, dynamic(max 450)") { [weak self] in
+        addButton("Present UITableViewController, dynamic(max 450)", prominent: true) { [weak self] in
             guard let self else { return }
             present(tableController, sizing: .dynamic(maxHeight: 450))
         }
-        addButton("Present UITableView (as a view), dynamic(max 450)") { [weak self] in
+        addButton("Present UITableView (as a view), dynamic(max 450)", prominent: true) { [weak self] in
             guard let self else { return }
             let tableView = UITableView(frame: .zero, style: .plain)
             tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")

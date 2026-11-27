@@ -1,10 +1,10 @@
 import UIKit
 import NativeBottomSheet
 
-/// Base screen for a demo. It shows the debug panel and a column of controls.
+/// Base screen for a demo. It shows the live numbers of the sheet and a column of controls.
 class DemoViewController: UIViewController {
     let controls = UIStackView()
-    private let debugLabel = UILabel()
+    private let metrics = MetricsView()
     private(set) var sheet: BottomSheet?
 
     /// Undimmed by default, so the controls on this screen stay usable.
@@ -18,40 +18,28 @@ class DemoViewController: UIViewController {
             self?.sheet?.dismiss(animated: true)
         })
 
-        debugLabel.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
-        debugLabel.numberOfLines = 0
-        debugLabel.text = "No sheet presented" + String(repeating: "\n", count: 4)
-        let card = UIView()
-        card.backgroundColor = .secondarySystemGroupedBackground
-        card.layer.cornerRadius = 10
-        card.translatesAutoresizingMaskIntoConstraints = false
-        debugLabel.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(debugLabel)
-
+        metrics.translatesAutoresizingMaskIntoConstraints = false
         controls.axis = .vertical
         controls.spacing = 10
+        controls.translatesAutoresizingMaskIntoConstraints = false
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
-        controls.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.alwaysBounceVertical = false
         scrollView.addSubview(controls)
 
-        view.addSubview(card)
+        view.addSubview(metrics)
         view.addSubview(scrollView)
         let guide = view.safeAreaLayoutGuide
         NSLayoutConstraint.activate([
-            card.topAnchor.constraint(equalTo: guide.topAnchor, constant: 8),
-            card.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 16),
-            card.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -16),
-            debugLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 8),
-            debugLabel.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -8),
-            debugLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 10),
-            debugLabel.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -10),
-            scrollView.topAnchor.constraint(equalTo: card.bottomAnchor, constant: 8),
+            metrics.topAnchor.constraint(equalTo: guide.topAnchor, constant: 8),
+            metrics.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 16),
+            metrics.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -16),
+            scrollView.topAnchor.constraint(equalTo: metrics.bottomAnchor, constant: 8),
             scrollView.leadingAnchor.constraint(equalTo: guide.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: guide.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: guide.bottomAnchor),
-            controls.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
-            controls.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            controls.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 8),
+            controls.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -16),
             controls.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor, constant: 16),
             controls.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor, constant: -16),
             controls.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor, constant: -32),
@@ -82,48 +70,66 @@ class DemoViewController: UIViewController {
 
     private func track(_ newSheet: BottomSheet) {
         sheet = newSheet
-        newSheet.onDiagnosticsChange = { [weak self] in self?.render($0) }
-        if let diagnostics = newSheet.diagnostics { render(diagnostics) }
-    }
-
-    private func render(_ d: BottomSheetDiagnostics) {
-        func pt(_ value: CGFloat?) -> String { value.map { String(format: "%.1f", $0) } ?? "–" }
-        debugLabel.text = """
-        sizing    \(d.sizingMode)  (detent \(d.selectedDetentIndex))
-        requested \(pt(d.requestedHeight))   measured \(pt(d.measuredContentHeight))
-        resolved  \(pt(d.resolvedDetentHeight))   actual   \(pt(d.actualSheetHeight))
-        max       \(pt(d.maximumDetentValue))
-        layouts   \(d.layoutPasses)   invalidations \(d.invalidations)   pages \(d.pageCount)
-        """
+        newSheet.onDiagnosticsChange = { [weak self] in self?.metrics.update($0) }
+        metrics.update(newSheet.diagnostics)
     }
 
     // MARK: Controls
 
+    /// A button. A prominent button opens a sheet. The others change a sheet or the screen.
     @discardableResult
-    func addButton(_ title: String, action: @escaping () -> Void) -> UIButton {
-        var buttonConfiguration = UIButton.Configuration.filled()
+    func addButton(_ title: String, prominent: Bool = false, action: @escaping () -> Void) -> UIButton {
+        var buttonConfiguration: UIButton.Configuration = prominent ? .filled() : .tinted()
         buttonConfiguration.title = title
+        buttonConfiguration.cornerStyle = .large
+        buttonConfiguration.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+        if prominent {
+            buttonConfiguration.image = UIImage(systemName: "rectangle.bottomthird.inset.filled")
+            buttonConfiguration.imagePadding = 8
+        }
         let button = UIButton(configuration: buttonConfiguration, primaryAction: UIAction { _ in action() })
         controls.addArrangedSubview(button)
         return button
     }
 
+    /// A short note above a group of controls.
     func addHeader(_ text: String) {
+        if let last = controls.arrangedSubviews.last { controls.setCustomSpacing(22, after: last) }
         let label = UILabel()
-        label.text = text.uppercased()
-        label.font = .preferredFont(forTextStyle: .footnote)
+        label.text = text
+        label.font = .preferredFont(forTextStyle: .subheadline)
+        label.adjustsFontForContentSizeCategory = true
         label.textColor = .secondaryLabel
         label.numberOfLines = 0
         controls.addArrangedSubview(label)
+        controls.setCustomSpacing(8, after: label)
     }
 
+    /// A row with a title and a control, on a card.
     func addRow(_ title: String, _ control: UIView) {
         let label = UILabel()
         label.text = title
+        label.font = .preferredFont(forTextStyle: .body)
+        label.adjustsFontForContentSizeCategory = true
+        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
         let row = UIStackView(arrangedSubviews: [label, control])
         row.spacing = 12
         row.alignment = .center
-        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        controls.addArrangedSubview(row)
+        row.isLayoutMarginsRelativeArrangement = true
+        row.layoutMargins = UIEdgeInsets(top: 10, left: 16, bottom: 10, right: 16)
+        let card = UIView()
+        card.backgroundColor = .secondarySystemGroupedBackground
+        card.layer.cornerRadius = 12
+        card.layer.cornerCurve = .continuous
+        row.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(row)
+        NSLayoutConstraint.activate([
+            row.topAnchor.constraint(equalTo: card.topAnchor),
+            row.bottomAnchor.constraint(equalTo: card.bottomAnchor),
+            row.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            row.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            card.heightAnchor.constraint(greaterThanOrEqualToConstant: 48),
+        ])
+        controls.addArrangedSubview(card)
     }
 }

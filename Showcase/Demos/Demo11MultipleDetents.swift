@@ -7,12 +7,12 @@ final class MultipleDetentsDemo: DemoViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        addButton("Present 5 detents") { [weak self] in
+        addButton("Present 5 detents", prominent: true) { [weak self] in
             guard let self else { return }
             present(StackContentView((1...14).map { makeLabel("Row \($0)") }), sizing: detents)
         }
 
-        addButton("Present solid background, fixed(300)") { [weak self] in
+        addButton("Present solid background, fixed(300)", prominent: true) { [weak self] in
             guard let self else { return }
             var solid = configuration
             solid.backgroundColor = .systemIndigo

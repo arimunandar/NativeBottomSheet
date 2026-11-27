@@ -5,16 +5,16 @@ final class KeyboardFormDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addHeader("Tap a field to show the keyboard")
-        addButton("Form, dynamic()") { [weak self] in self?.present(FormView(fields: 3), sizing: .dynamic()) }
-        addButton("Form, fixed(300)") { [weak self] in self?.present(FormView(fields: 3), sizing: .fixed(300)) }
-        addButton("Form, medium") { [weak self] in self?.present(FormView(fields: 3), sizing: .medium) }
-        addButton("Growing text view, dynamic()") { [weak self] in
+        addButton("Form, dynamic()", prominent: true) { [weak self] in self?.present(FormView(fields: 3), sizing: .dynamic()) }
+        addButton("Form, fixed(300)", prominent: true) { [weak self] in self?.present(FormView(fields: 3), sizing: .fixed(300)) }
+        addButton("Form, medium", prominent: true) { [weak self] in self?.present(FormView(fields: 3), sizing: .medium) }
+        addButton("Growing text view, dynamic()", prominent: true) { [weak self] in
             self?.present(FormView(fields: 1, growingTextView: true), sizing: .dynamic())
         }
-        addButton("Growing text view, dynamic(max 400)") { [weak self] in
+        addButton("Growing text view, dynamic(max 400)", prominent: true) { [weak self] in
             self?.present(FormView(fields: 1, growingTextView: true), sizing: .dynamic(maxHeight: 400))
         }
-        addButton("Long form (10 fields), dynamic(max 400)") { [weak self] in
+        addButton("Long form (10 fields), dynamic(max 400)", prominent: true) { [weak self] in
             self?.present(FormView(fields: 10), sizing: .dynamic(maxHeight: 400))
         }
     }

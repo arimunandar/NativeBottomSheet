@@ -8,11 +8,11 @@ final class CollectionDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addHeader("A collection as content. Item changes are observed automatically.")
-        addButton("Present UICollectionViewController, dynamic(max 450)") { [weak self] in
+        addButton("Present UICollectionViewController, dynamic(max 450)", prominent: true) { [weak self] in
             guard let self else { return }
             present(collectionController, sizing: .dynamic(maxHeight: 450))
         }
-        addButton("Present UICollectionView (as a view), dynamic(max 450)") { [weak self] in
+        addButton("Present UICollectionView (as a view), dynamic(max 450)", prominent: true) { [weak self] in
             guard let self else { return }
             let collectionView = UICollectionView(frame: .zero, collectionViewLayout: ItemsModel.makeLayout())
             items.attach(collectionView)

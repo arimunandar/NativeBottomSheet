@@ -10,14 +10,8 @@ final class RuntimeResizeDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         animatedSwitch.isOn = true
-        addButton("Present at 300 pt") { [weak self] in self?.presentSheet() }
-        addHeader("Update the presented sheet")
-        addButton("+ 50 pt") { [weak self] in self?.update(by: 50) }
-        addButton("− 50 pt") { [weak self] in self?.update(by: -50) }
-        addButton("Burst: 20 updates in one turn") { [weak self] in
-            guard let self else { return }
-            for step in 1...20 { set(150 + CGFloat(step) * 20) }
-        }
+        addButton("Present at 300 pt", prominent: true) { [weak self] in self?.presentSheet() }
+        addHeader("Change the height while the sheet is open")
         addRow("Animated", animatedSwitch)
         slider.minimumValue = 100
         slider.maximumValue = 900
@@ -27,10 +21,22 @@ final class RuntimeResizeDemo: DemoViewController {
             sheet?.updateHeight(CGFloat(slider.value), animated: false)
             valueLabel.text = "\(Int(slider.value)) pt"
         }, for: .valueChanged)
-        controls.addArrangedSubview(slider)
         valueLabel.text = "\(Int(height)) pt"
-        valueLabel.textAlignment = .center
-        controls.addArrangedSubview(valueLabel)
+        valueLabel.font = .monospacedDigitSystemFont(ofSize: 17, weight: .semibold)
+        valueLabel.textColor = .tintColor
+        addRow("Height", valueLabel)
+        controls.addArrangedSubview(slider)
+        let steps = UIStackView(arrangedSubviews: [
+            makeButton("− 50 pt") { [weak self] in self?.update(by: -50) },
+            makeButton("+ 50 pt") { [weak self] in self?.update(by: 50) },
+        ])
+        steps.distribution = .fillEqually
+        steps.spacing = 10
+        controls.addArrangedSubview(steps)
+        addButton("Burst: 20 updates in one turn") { [weak self] in
+            guard let self else { return }
+            for step in 1...20 { set(150 + CGFloat(step) * 20) }
+        }
     }
 
     private func presentSheet() {

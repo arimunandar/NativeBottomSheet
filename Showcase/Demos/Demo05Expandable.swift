@@ -5,7 +5,7 @@ final class ExpandableDemo: DemoViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         addHeader("Sections animate open. The sheet follows.")
-        addButton("Present expandable content") { [weak self] in
+        addButton("Present expandable content", prominent: true) { [weak self] in
             self?.present(ExpandableContentView(), sizing: .dynamic())
         }
     }

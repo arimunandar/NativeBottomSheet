@@ -7,9 +7,9 @@ final class StressTestDemo: DemoViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        addButton("100 animated updates (20 ms apart)") { [weak self] in self?.run { await self?.heightUpdates(animated: true, spacing: 20_000_000) } }
-        addButton("100 non-animated updates (one loop)") { [weak self] in self?.run { await self?.heightUpdates(animated: false, spacing: 0) } }
-        addButton("100 present + dismiss cycles") { [weak self] in self?.run { await self?.presentCycles() } }
+        addButton("100 animated updates (20 ms apart)", prominent: true) { [weak self] in self?.run { await self?.heightUpdates(animated: true, spacing: 20_000_000) } }
+        addButton("100 non-animated updates (one loop)", prominent: true) { [weak self] in self?.run { await self?.heightUpdates(animated: false, spacing: 0) } }
+        addButton("100 present + dismiss cycles", prominent: true) { [weak self] in self?.run { await self?.presentCycles() } }
         controls.addArrangedSubview(result)
     }
 
