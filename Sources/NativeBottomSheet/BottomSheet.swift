@@ -1,5 +1,13 @@
 import UIKit
 
+/// Why a sheet closed.
+public enum BottomSheetDismissReason {
+    /// The user dragged the sheet down, or tapped the dimmed area.
+    case interactive
+    /// Your code dismissed it, or UIKit did, for example when the presenter went away.
+    case programmatic
+}
+
 /// A native bottom sheet built on `UISheetPresentationController`.
 ///
 /// Present content with one call. The sheet follows the content height by default:
@@ -204,6 +212,34 @@ public final class BottomSheet {
 
     /// The current sizing numbers. `nil` when the sheet is gone.
     public var diagnostics: BottomSheetDiagnostics? { controller?.diagnostics }
+
+    // MARK: Events
+
+    /// Called once when the sheet has closed, for any reason. Not called when the sheet never appeared.
+    /// The sheet and its content are already given back at that point.
+    public var onDismiss: ((BottomSheetDismissReason) -> Void)? {
+        get { controller?.onDismiss }
+        set { controller?.onDismiss = newValue }
+    }
+
+    /// Called when the user tries to dismiss the sheet, but `allowsInteractiveDismissal` is false.
+    /// Use it to ask "Discard changes?".
+    public var onAttemptToDismiss: (() -> Void)? {
+        get { controller?.onAttemptToDismiss }
+        set { controller?.onAttemptToDismiss = newValue }
+    }
+
+    /// Called when the selected detent changes, by the user or by `selectDetent`. It gets the index of the new detent.
+    public var onDetentChange: ((Int) -> Void)? {
+        get { controller?.onDetentChange }
+        set { controller?.onDetentChange = newValue }
+    }
+
+    /// Called when a page is added or removed by `push`, `pop` or `popToRoot`. It gets the new number of pages.
+    public var onPageChange: ((Int) -> Void)? {
+        get { controller?.onPageChange }
+        set { controller?.onPageChange = newValue }
+    }
 
     /// Called on the main queue after the numbers change. At most once per run loop turn.
     public var onDiagnosticsChange: ((BottomSheetDiagnostics) -> Void)? {

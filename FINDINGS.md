@@ -149,6 +149,24 @@ Instruments profiling, VoiceOver. Anything that depends on those is marked "not 
     Result: 50 presses on the screens and 25 inside the sheets, no crash, on a simulator (iOS 26.3) and on an iPhone 15 Pro.
     It does not cover sliders, switches, typing, rotation or iPad.
 
+16. **Events for what the user does.**
+    Verified on iOS 26.3 with real gestures:
+    - Dragging the sheet down calls UIKit in this order: `presentationControllerWillDismiss`, `viewWillDisappear`,
+      `viewDidDisappear`, `presentationControllerDidDismiss` (1 ms later). A tap on the dimming gives "dismissed by the user" too.
+    - The first version read the reason through a weak `self` after one run loop turn. On a device the presenter had already
+      released the controller, so every drag-down was reported as "by code". The unit tests kept the controller alive and passed.
+      The reason now lives in a small object that the closure holds, and a test releases the controller first.
+    - A dismissal blocked by `allowsInteractiveDismissal` calls `onAttemptToDismiss`.
+    - A drag between detents and `selectDetent` both call `onDetentChange`, once for each change.
+    - A push gave "now 2 pages", and a pop gave "now 1 page".
+17. **The dim color.**
+    UIKit has no setting for the dimming color. With `dimmingColor`, the library draws its own layer in the top-most
+    ancestor view of the presenter (so it covers the navigation bar too), below the sheet.
+    It fades in with the presentation, fades out with a dismissal (also with a drag), and comes back when a drag is cancelled.
+    Verified: red at 45% alpha covered the page, a tap on it dismissed the sheet, a drag-down removed it,
+    and a tap was blocked when dismissal was off.
+    Not verified: a sheet on a sheet with dimming, rotation while dimmed, VoiceOver, and a cancelled drag.
+
 ## Capability matrix
 
 | Capability | Status | Evidence |
@@ -172,6 +190,8 @@ Instruments profiling, VoiceOver. Anything that depends on those is marked "not 
 | Corner radius with a solid color | Native support | Demo 11, radius 24 |
 | Grabber color | Supported with custom implementation | Demo 11, finding 11 |
 | Page behind stays at full height | Supported with custom implementation | Demos 01 and 11, finding 12 |
+| Dim color | Supported with custom implementation | Demo 11, finding 17 |
+| Events for dismissal, detent and page | Supported with custom implementation | Demos 11 and 13, finding 16 |
 | Header and footer | Supported with custom implementation | Demo 13, finding 14 |
 | Push and pop inside the sheet | Supported with custom implementation | Demo 13, finding 14. Swipe-back is not supported. |
 | Keyboard handling | Native support | Demo 10 (finding 2) |

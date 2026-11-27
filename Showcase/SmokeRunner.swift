@@ -9,6 +9,8 @@ enum SmokeRunner {
         if let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("smoke.log") {
             try? FileManager.default.removeItem(at: url)
         }
+        // `-smokeRun ID` puts an id in the first line, so a log from an older run cannot be mistaken for this one.
+        log("[SMOKE] run \(UserDefaults.standard.string(forKey: "smokeRun") ?? "-")")
         for number in menu.demoNumbers {
             guard let screen = menu.showDemo(number) else { continue }
             await pause(0.8)

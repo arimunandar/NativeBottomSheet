@@ -15,7 +15,7 @@ Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/arimunandar/NativeBottomSheet.git", from: "0.2.1"),
+    .package(url: "https://github.com/arimunandar/NativeBottomSheet.git", from: "0.3.0"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "NativeBottomSheet", package: "NativeBottomSheet")]),
@@ -215,6 +215,27 @@ Your header has to show its own back button and call `sheet.pop()`. The library 
 - The sheet follows the page on top only when its sizing follows the content (`.dynamic`).
   With `.fixed` or `.detents`, the height stays the same for every page.
 
+## Events
+
+The handle tells you what the user does. Set the closures after `present`:
+
+```swift
+let sheet = BottomSheet.present(content: view, sizing: .detents([.fixed(160), .medium, .large]), from: self)
+
+sheet.onDismiss = { reason in           // once, when the sheet has closed
+    // reason is .interactive (dragged down, or tapped outside) or .programmatic (your code, or UIKit)
+}
+sheet.onAttemptToDismiss = {            // the user tried to close it, but allowsInteractiveDismissal is false
+    // for example: ask "Discard changes?"
+}
+sheet.onDetentChange = { index in }     // the user, or selectDetent, moved the sheet to another detent
+sheet.onPageChange = { count in }       // a push, a pop or popToRoot changed the number of pages
+```
+
+- The sheet and its content are already given back when `onDismiss` runs, so you can present them again.
+- `onDismiss` runs once for every sheet that appeared. The closures are dropped after that, so they never keep your objects alive.
+- Taps on buttons in your own content are your own closures. The library does not see them.
+
 ## Control the sheet
 
 `present` returns a handle. Keep it if you want to change the sheet later.
@@ -254,12 +275,18 @@ let configuration = BottomSheetConfiguration(
     prefersScrollingExpandsWhenScrolledToEdge: false,
     backgroundColor: .systemIndigo,   // solid. On iOS 26.1 and later it replaces the glass background
     dimsBackground: false,            // the screen behind stays usable
-    grabberColor: .white              // UIKit has no grabber color, so the library draws this grabber
+    grabberColor: .white,             // UIKit has no grabber color, so the library draws this grabber
+    dimmingColor: UIColor.black.withAlphaComponent(0.6)   // the dimming behind the sheet. The alpha sets how dark it is
 )
 BottomSheet.present(content: myView, configuration: configuration, from: self)
 ```
 
 Every option is optional. You can change the configuration while the sheet is shown: `sheet.configuration = configuration`.
+
+**Dimming.** `dimsBackground` turns the dimming on or off. UIKit has no setting for its color. So when you set `dimmingColor`,
+the library switches UIKit's dimming off and draws its own layer over the whole screen of the presenter,
+below the sheet and above your page. It fades with the sheet. A tap on it dismisses the sheet,
+or calls `onAttemptToDismiss` when `allowsInteractiveDismissal` is false. `dimmingColor` does nothing when `dimsBackground` is false.
 
 ## What the content must do
 

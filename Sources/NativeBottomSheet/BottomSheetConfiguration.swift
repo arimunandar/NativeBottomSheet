@@ -18,6 +18,10 @@ public struct BottomSheetConfiguration {
     /// nil keeps the system grabber. A color draws the component's own grabber instead,
     /// because UIKit has no API for the system grabber color. Needs `showsGrabber`.
     public var grabberColor: UIColor?
+    /// The color of the dimming behind the sheet. Its alpha sets how dark it is: `UIColor.black.withAlphaComponent(0.6)`.
+    /// nil keeps the system dimming. UIKit has no setting for the color, so a color makes the library draw its own
+    /// dimming layer over the presenter. A tap on it dismisses the sheet. Ignored when `dimsBackground` is false.
+    public var dimmingColor: UIColor?
 
     public init(
         cornerRadius: CGFloat? = nil,
@@ -26,7 +30,8 @@ public struct BottomSheetConfiguration {
         prefersScrollingExpandsWhenScrolledToEdge: Bool = true,
         backgroundColor: UIColor? = nil,
         dimsBackground: Bool = true,
-        grabberColor: UIColor? = nil
+        grabberColor: UIColor? = nil,
+        dimmingColor: UIColor? = nil
     ) {
         self.cornerRadius = cornerRadius
         self.showsGrabber = showsGrabber
@@ -35,5 +40,6 @@ public struct BottomSheetConfiguration {
         self.backgroundColor = backgroundColor
         self.dimsBackground = dimsBackground
         self.grabberColor = grabberColor
+        self.dimmingColor = dimmingColor
     }
 }

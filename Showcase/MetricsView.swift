@@ -5,6 +5,7 @@ import NativeBottomSheet
 final class MetricsView: UIView {
     private let modeLabel = UILabel()
     private let detentLabel = UILabel()
+    private let eventLabel = UILabel()
     private var valueLabels: [String: UILabel] = [:]
     private let titles = ["Requested", "Content", "Resolved", "Actual", "Max", "Layouts", "Invalidations", "Pages"]
 
@@ -17,6 +18,7 @@ final class MetricsView: UIView {
         detentLabel.font = .preferredFont(forTextStyle: .footnote)
         detentLabel.textColor = .tintColor
         detentLabel.setContentHuggingPriority(.required, for: .horizontal)
+        detentLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
         let top = UIStackView(arrangedSubviews: [modeLabel, detentLabel])
         top.alignment = .firstBaseline
         top.spacing = 8
@@ -32,7 +34,11 @@ final class MetricsView: UIView {
             row.spacing = 8
             return row
         }
-        let stack = UIStackView(arrangedSubviews: [top] + rows)
+        eventLabel.font = .preferredFont(forTextStyle: .footnote)
+        eventLabel.textColor = .secondaryLabel
+        eventLabel.numberOfLines = 0
+        eventLabel.text = "Last event: none yet"
+        let stack = UIStackView(arrangedSubviews: [top] + rows + [eventLabel])
         stack.axis = .vertical
         stack.spacing = 8
         stack.setCustomSpacing(12, after: top)
@@ -85,6 +91,15 @@ final class MetricsView: UIView {
         set("Layouts", d.map { "\($0.layoutPasses)" } ?? "–")
         set("Invalidations", d.map { "\($0.invalidations)" } ?? "–")
         set("Pages", d.map { "\($0.pageCount)" } ?? "–")
+    }
+
+    /// Shows the last event the sheet reported to the app, for example a dismissal. It flashes.
+    func showEvent(_ text: String) {
+        eventLabel.text = "Last event: \(text)"
+        eventLabel.textColor = .tintColor
+        UIView.transition(with: eventLabel, duration: 1.2, options: [.allowUserInteraction, .transitionCrossDissolve]) {
+            self.eventLabel.textColor = .secondaryLabel
+        }
     }
 
     private func set(_ title: String, _ text: String) {

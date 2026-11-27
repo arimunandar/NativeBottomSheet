@@ -71,6 +71,13 @@ class DemoViewController: UIViewController {
     private func track(_ newSheet: BottomSheet) {
         sheet = newSheet
         newSheet.onDiagnosticsChange = { [weak self] in self?.metrics.update($0) }
+        newSheet.onDismiss = { [weak self] reason in
+            self?.metrics.showEvent(reason == .interactive ? "dismissed by the user" : "dismissed by code")
+            self?.metrics.update(nil)
+        }
+        newSheet.onAttemptToDismiss = { [weak self] in self?.metrics.showEvent("the user tried to dismiss, but it is blocked") }
+        newSheet.onDetentChange = { [weak self] index in self?.metrics.showEvent("detent changed to \(index)") }
+        newSheet.onPageChange = { [weak self] count in self?.metrics.showEvent("now \(count) page\(count == 1 ? "" : "s")") }
         metrics.update(newSheet.diagnostics)
     }
 

@@ -20,6 +20,11 @@ public struct BottomSheetDiagnostics {
     public init() {}
 }
 
+/// Whether the user closed the sheet. A class, so a closure can keep it after the controller is gone.
+final class DismissalState {
+    var byUser = false
+}
+
 /// The presented view controller. It hosts a stack of pages and drives the sheet.
 @MainActor
 final class BottomSheetController: UIViewController, UISheetPresentationControllerDelegate {
@@ -34,6 +39,10 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
     }
     private(set) var diagnostics = BottomSheetDiagnostics()
     var onDiagnosticsChange: ((BottomSheetDiagnostics) -> Void)?
+    var onDismiss: ((BottomSheetDismissReason) -> Void)?
+    var onAttemptToDismiss: (() -> Void)?
+    var onDetentChange: ((Int) -> Void)?
+    var onPageChange: ((Int) -> Void)?
 
     /// The pages. The last one is on top. There is always at least one until the sheet releases its content.
     private(set) var pages: [BottomSheetPage]
@@ -47,6 +56,9 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
     private var isDiagnosticsScheduled = false
     private let grabberView = UIView()
     private var isContentReleased = false
+    private let dismissal = DismissalState()
+    private var scrim: UIView?
+    private var didNotifyDismiss = false
 
     /// Push and pop requests run one after the other.
     private var queue: [(animated: Bool, completion: (() -> Void)?, run: (_ animated: Bool, _ done: @escaping () -> Void) -> Void)] = []
@@ -84,7 +96,7 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
         guard newSizing != sizing else { return }
         sizing = newSizing
         resolvedHeights = [:]
-        diagnostics.selectedDetentIndex = min(diagnostics.selectedDetentIndex, sizing.detentList.count - 1)
+        setSelectedDetent(min(diagnostics.selectedDetentIndex, sizing.detentList.count - 1))
         guard let sheet = sheetPresentationController else { return }
         applyToSheet(animated: animated) {
             sheet.detents = self.makeDetents()
@@ -105,8 +117,7 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
 
     func selectDetent(at index: Int, animated: Bool) {
         guard sizing.detentList.indices.contains(index), let sheet = sheetPresentationController else { return }
-        diagnostics.selectedDetentIndex = index
-        diagnostics.resolvedDetentHeight = resolvedHeights[index]
+        setSelectedDetent(index)
         applyToSheet(animated: animated) { sheet.selectedDetentIdentifier = self.identifier(at: index) }
     }
 
@@ -144,9 +155,39 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
         scheduleDiagnostics()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        installScrim()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        guard isBeingDismissed, let scrim else { return }
+        // The dimming fades with the dismissal, also with a drag. A cancelled drag brings it back.
+        guard let coordinator = transitionCoordinator else { return removeScrim() }
+        coordinator.animate(alongsideTransition: { _ in scrim.alpha = 0 }, completion: { [weak self] context in
+            if context.isCancelled {
+                scrim.alpha = 1
+            } else {
+                scrim.removeFromSuperview()
+                self?.scrim = nil
+            }
+        })
+    }
+
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        if isBeingDismissed || presentingViewController == nil { releaseContent() }
+        guard isBeingDismissed || presentingViewController == nil, !didNotifyDismiss else { return }
+        didNotifyDismiss = true
+        let handler = onDismiss
+        releaseContent()
+        // UIKit says in `presentationControllerDidDismiss` that the user did it. That call can come after this one,
+        // so wait one run loop turn before the reason is read.
+        // The closure holds `state`, not `self`: the presenter releases this controller right after the dismissal.
+        let state = dismissal
+        DispatchQueue.main.async {
+            handler?(state.byUser ? .interactive : .programmatic)
+        }
     }
 
     override func preferredContentSizeDidChange(forChildContentContainer container: UIContentContainer) {
@@ -161,7 +202,12 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
         isContentReleased = true
         queue.removeAll()
         pages.forEach { $0.release() }
+        removeScrim()
         onDiagnosticsChange = nil
+        onDismiss = nil
+        onAttemptToDismiss = nil
+        onDetentChange = nil
+        onPageChange = nil
     }
 
     // MARK: Pages
@@ -185,6 +231,7 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
             let outgoing = pages[pages.count - 1]
             pages.append(page)
             mount(page)
+            onPageChange?(pages.count)
             view.layoutIfNeeded()
             measureAndApply()
             let shift = slideDistance
@@ -226,6 +273,7 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
         guard !isContentReleased, count >= 1, pages.count > count else { return done() }
         let leaving = Array(pages[count...])
         pages.removeSubrange(count...)
+        onPageChange?(pages.count)
         let revealed = pages[count - 1]
         let top = leaving[leaving.count - 1]
         revealed.view.isHidden = false
@@ -382,15 +430,86 @@ final class BottomSheetController: UIViewController, UISheetPresentationControll
             sheet.detents.forEach { $0.backgroundEffect = effect }
         }
         #endif
-        sheet.largestUndimmedDetentIdentifier = configuration.dimsBackground ? nil : identifier(at: sizing.detentList.count - 1)
+        // With an own dimming color, UIKit dims nothing. The library draws the dimming.
+        let usesSystemDimming = configuration.dimsBackground && configuration.dimmingColor == nil
+        sheet.largestUndimmedDetentIdentifier = usesSystemDimming ? nil : identifier(at: sizing.detentList.count - 1)
+        updateScrim()
     }
 
     func sheetPresentationControllerDidChangeSelectedDetentIdentifier(_ sheet: UISheetPresentationController) {
         guard let selected = sheet.selectedDetentIdentifier,
               let index = sizing.detentList.indices.first(where: { identifier(at: $0) == selected }) else { return }
+        setSelectedDetent(index)
+        scheduleDiagnostics()
+    }
+
+    /// Records a new selected detent. Tells the app only when it changed, so a move by the user
+    /// and the same move by `selectDetent` are reported once.
+    private func setSelectedDetent(_ index: Int) {
+        let changed = index != diagnostics.selectedDetentIndex
         diagnostics.selectedDetentIndex = index
         diagnostics.resolvedDetentHeight = resolvedHeights[index]
-        scheduleDiagnostics()
+        if changed { onDetentChange?(index) }
+    }
+
+    /// The user dragged the sheet down, or tapped the dimmed area, and the sheet closed.
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        dismissal.byUser = true
+    }
+
+    /// The user tried to dismiss, but `allowsInteractiveDismissal` is false.
+    func presentationControllerDidAttemptToDismiss(_ presentationController: UIPresentationController) {
+        onAttemptToDismiss?()
+    }
+
+    // MARK: Dimming
+
+    /// The own dimming color, or nil when UIKit dims or nothing dims.
+    private var dimmingColor: UIColor? {
+        configuration.dimsBackground ? configuration.dimmingColor : nil
+    }
+
+    /// The top view of the hierarchy under the sheet. It also covers a navigation bar or a tab bar.
+    /// For a sheet on a sheet, it is the view of the lower sheet.
+    static func topAncestor(of controller: UIViewController?) -> UIViewController? {
+        var top = controller
+        while let parent = top?.parent { top = parent }
+        return top
+    }
+
+    private func installScrim() {
+        guard scrim == nil, let color = dimmingColor, !isContentReleased,
+              let parent = Self.topAncestor(of: presentingViewController)?.viewIfLoaded else { return }
+        let view = UIView(frame: parent.bounds)
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.backgroundColor = color
+        view.alpha = 0
+        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(scrimTapped)))
+        parent.addSubview(view)
+        scrim = view
+        if let coordinator = transitionCoordinator {
+            coordinator.animate(alongsideTransition: { _ in view.alpha = 1 })
+        } else {
+            view.alpha = 1
+        }
+    }
+
+    /// Applies a changed configuration to a dimming layer that is already there.
+    private func updateScrim() {
+        guard let color = dimmingColor else { return removeScrim() }
+        if let scrim { scrim.backgroundColor = color } else if view.window != nil { installScrim() }
+    }
+
+    private func removeScrim() {
+        scrim?.removeFromSuperview()
+        scrim = nil
+    }
+
+    /// A tap on the dimming does what a tap on the system dimming does.
+    @objc private func scrimTapped() {
+        guard configuration.allowsInteractiveDismissal else { return onAttemptToDismiss?() ?? () }
+        dismissal.byUser = true
+        dismiss(animated: true)
     }
 
     // MARK: Diagnostics

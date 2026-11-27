@@ -32,6 +32,13 @@ final class MultipleDetentsDemo: DemoViewController {
         addHeader("Appearance")
         addToggle("Grabber", isOn: configuration.showsGrabber) { $0.showsGrabber = $1 }
         addToggle("Dim background", isOn: configuration.dimsBackground) { $0.dimsBackground = $1 }
+        let dimColors: [UIColor?] = [nil, .black.withAlphaComponent(0.6), .systemRed.withAlphaComponent(0.45), .systemBlue.withAlphaComponent(0.35)]
+        let dim = UISegmentedControl(items: ["System", "Black", "Red", "Blue"])
+        dim.selectedSegmentIndex = 0
+        dim.addAction(UIAction { [weak self, unowned dim] _ in
+            self?.update { $0.dimmingColor = dimColors[dim.selectedSegmentIndex] }
+        }, for: .valueChanged)
+        addRow("Dim color", dim)
         addToggle("Interactive dismissal", isOn: configuration.allowsInteractiveDismissal) { $0.allowsInteractiveDismissal = $1 }
         addToggle("Scroll expands sheet", isOn: configuration.prefersScrollingExpandsWhenScrolledToEdge) {
             $0.prefersScrollingExpandsWhenScrolledToEdge = $1

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Events: `onDismiss(reason)`, `onAttemptToDismiss`, `onDetentChange(index)`, `onPageChange(count)`.
+- `BottomSheetDismissReason`: `.interactive` or `.programmatic`.
+- `BottomSheetConfiguration.dimmingColor`: the color and darkness of the dimming behind the sheet.
+
 ## 0.2.1
 
 - Fix a crash: `BottomSheetSizing.description`, which feeds `diagnostics.sizingMode`, converted heights with `Int(...)`.
