@@ -1,0 +1,46 @@
+name: BottomSheetPOC
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+packages:
+  NativeBottomSheet:
+    path: .
+targets:
+  BottomSheetPOC:
+    type: application
+    platform: iOS
+    dependencies:
+      - package: NativeBottomSheet
+    sources:
+      - App
+      - Showcase
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: BottomSheet POC
+        UILaunchScreen: {}
+        UIDesignRequiresCompatibility: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.BottomSheetPOC
+        GENERATE_INFOPLIST_FILE: NO
